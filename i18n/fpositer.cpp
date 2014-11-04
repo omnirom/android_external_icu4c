@@ -56,20 +56,6 @@ UBool FieldPositionIterator::operator==(const FieldPositionIterator &rhs) const 
   return rhs.data ? data->operator==(*rhs.data) : FALSE;
 }
 
-// BEGIN android-added
-int32_t FieldPositionIterator::getData(int32_t *dest, int32_t capacity) const {
-  int32_t len = data ? data->size() : 0;
-  if (len && dest) {
-    if (capacity < len) {
-      len = -len; // error, insufficient capacity
-    } else {
-      memcpy(dest, data->getBuffer(), len * sizeof(int32_t));
-    }
-  }
-  return len;
-}
-// END android-added
-
 void FieldPositionIterator::setData(UVector32 *adopt, UErrorCode& status) {
   // Verify that adopt has valid data, and update status if it doesn't.
   if (U_SUCCESS(status)) {
@@ -96,7 +82,7 @@ void FieldPositionIterator::setData(UVector32 *adopt, UErrorCode& status) {
 
   delete data;
   data = adopt;
-  pos = adopt == NULL ? -1 : 0;
+  pos = (adopt == NULL || adopt->size() == 0) ? -1 : 0; // android-changed: http://bugs.icu-project.org/trac/ticket/10354
 }
 
 UBool FieldPositionIterator::next(FieldPosition& fp) {
@@ -118,4 +104,3 @@ UBool FieldPositionIterator::next(FieldPosition& fp) {
 U_NAMESPACE_END
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
-

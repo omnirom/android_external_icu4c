@@ -22,7 +22,10 @@ LOCAL_PATH:= $(call my-dir)
 src_files := \
 	cmemory.c          cstring.c          \
 	cwchar.c           locmap.c           \
+	lrucache.cpp \
 	punycode.cpp       putil.cpp          \
+	sharedobject.cpp \
+	simplepatternformatter.cpp \
 	uarrsort.c         ubidi.c            \
 	ubidiln.c          ubidi_props.c      \
 	ubidiwrt.c         ucase.cpp          \
@@ -42,11 +45,11 @@ src_files := \
 	ucnv_u8.c                             \
 	udatamem.c         \
 	udataswp.c         uenum.c            \
-	uhash.c            uinit.c            \
+	uhash.c            uinit.cpp          \
 	uinvchar.c         uloc.cpp           \
 	umapfile.c         umath.c            \
 	umutex.cpp         unames.cpp         \
-	unorm_it.c         uresbund.cpp       \
+	uresbund.cpp       \
 	ures_cnv.c         uresdata.c         \
 	usc_impl.c         uscript.c          \
 	uscript_props.cpp  \
@@ -93,7 +96,7 @@ src_files += \
 	uvector.cpp     uvectr32.cpp     \
 	errorcode.cpp                    \
 	bytestream.cpp  stringpiece.cpp  \
-	mutex.cpp       dtintrv.cpp      \
+	dtintrv.cpp      \
 	ucnvsel.cpp     uvectr64.cpp     \
 	locavailable.cpp         locdispnames.cpp   \
 	loclikely.cpp            locresdata.cpp     \
@@ -108,7 +111,8 @@ src_files += \
 	dictionarydata.cpp \
 	ustrcase_locale.cpp unistr_titlecase_brkiter.cpp \
 	uniset_closure.cpp ucasemap_titlecase_brkiter.cpp \
-	ustr_titlecase_brkiter.cpp unistr_case_locale.cpp
+	ustr_titlecase_brkiter.cpp unistr_case_locale.cpp \
+	listformatter.cpp
 
 
 # This is the empty compiled-in icu data structure
@@ -127,15 +131,11 @@ local_cflags += '-DICU_DATA_DIR="/usr/icu"'
 
 # bionic doesn't have <langinfo.h>.
 local_cflags += -DU_HAVE_NL_LANGINFO_CODESET=0
-# bionic has timezone instead of __timezone.
-local_cflags += -DU_TIMEZONE=timezone
 
 local_cflags += -D_REENTRANT
 local_cflags += -DU_COMMON_IMPLEMENTATION
 
 local_cflags += -O3 -fvisibility=hidden
-local_ldlibs := -ldl -lm -lpthread
-
 
 #
 # Build for the target (device).
@@ -143,32 +143,51 @@ local_ldlibs := -ldl -lm -lpthread
 
 include $(CLEAR_VARS)
 LOCAL_SRC_FILES += $(src_files)
-LOCAL_C_INCLUDES += $(c_includes)
+LOCAL_C_INCLUDES += $(c_includes) $(optional_android_logging_includes)
 LOCAL_CFLAGS += $(local_cflags) -DPIC -fPIC
-LOCAL_SHARED_LIBRARIES += libdl
-LOCAL_LDLIBS += $(local_ldlibs)
+LOCAL_SHARED_LIBRARIES += libdl $(optional_android_logging_libraries)
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := libicuuc
 LOCAL_ADDITIONAL_DEPENDENCIES += $(LOCAL_PATH)/Android.mk
 LOCAL_REQUIRED_MODULES += icu-data
-include abi/cpp/use_rtti.mk
-include external/stlport/libstlport.mk
+# Use "-include" to not fail apps_only build.
+-include abi/cpp/use_rtti.mk
+-include external/stlport/libstlport.mk
 include $(BUILD_SHARED_LIBRARY)
-
 
 #
 # Build for the host.
 #
 
-ifeq ($(WITH_HOST_DALVIK),true)
-    include $(CLEAR_VARS)
-    LOCAL_SRC_FILES += $(src_files)
-    LOCAL_C_INCLUDES += $(c_includes)
-    LOCAL_CFLAGS += $(local_cflags)
-    LOCAL_LDLIBS += $(local_ldlibs)
-    LOCAL_MODULE_TAGS := optional
-    LOCAL_MODULE := libicuuc-host
-    LOCAL_ADDITIONAL_DEPENDENCIES += $(LOCAL_PATH)/Android.mk
-    LOCAL_REQUIRED_MODULES += icu-data-host
-    include $(BUILD_HOST_SHARED_LIBRARY)
-endif
+include $(CLEAR_VARS)
+LOCAL_SRC_FILES += $(src_files)
+LOCAL_C_INCLUDES += $(c_includes) $(optional_android_logging_includes)
+LOCAL_CFLAGS += $(local_cflags)
+LOCAL_SHARED_LIBRARIES += $(optional_android_logging_libraries)
+LOCAL_LDLIBS += -ldl -lm -lpthread
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE := libicuuc-host
+LOCAL_ADDITIONAL_DEPENDENCIES += $(LOCAL_PATH)/Android.mk
+LOCAL_REQUIRED_MODULES += icu-data-host
+LOCAL_MULTILIB := both
+include $(BUILD_HOST_SHARED_LIBRARY)
+
+#
+# Build as a static library against the NDK
+#
+
+include $(CLEAR_VARS)
+LOCAL_SDK_VERSION := 9
+LOCAL_NDK_STL_VARIANT := stlport_static
+LOCAL_C_INCLUDES += $(c_includes)
+LOCAL_EXPORT_C_INCLUDES += $(LOCAL_PATH)
+LOCAL_CPP_FEATURES := rtti
+LOCAL_CFLAGS += $(local_cflags) -DPIC -fPIC -frtti
+# Using -Os over -O3 actually cuts down the final executable size by a few dozen kilobytes
+LOCAL_CFLAGS += -Os
+LOCAL_EXPORT_CFLAGS += -DU_STATIC_IMPLEMENTATION=1
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE := libicuuc_static
+LOCAL_SRC_FILES += $(src_files)
+LOCAL_REQUIRED_MODULES += icu-data
+include $(BUILD_STATIC_LIBRARY)

@@ -1,6 +1,6 @@
 /*
 **********************************************************************
-*   Copyright (C) 2000-2012, International Business Machines
+*   Copyright (C) 2000-2014, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 **********************************************************************
 *   file name:  ucnv2022.cpp
@@ -495,10 +495,10 @@ _ISO2022Open(UConverter *cnv, UConverterLoadArgs *pArgs, UErrorCode *errorCode){
                     ucnv_loadSharedData("ISO8859_7", &stackPieces, &stackArgs, errorCode);
             }
             if (myLocale[1]=='k') {  /* Use KDDI's version. */
-                myConverterData->myConverterArray[JISX208] =
+                myConverterData->myConverterArray[JISX208]  = 
                     ucnv_loadSharedData("kddi-jisx-208-2007", &stackPieces, &stackArgs, errorCode);
             } else if (myLocale[1]=='s') {  /* Use SoftBank's version. */
-                myConverterData->myConverterArray[JISX208] =
+                myConverterData->myConverterArray[JISX208]  = 
                     ucnv_loadSharedData("softbank-jisx-208-2007", &stackPieces, &stackArgs, errorCode);
             } else {
                 /*
@@ -513,8 +513,6 @@ _ISO2022Open(UConverter *cnv, UConverterLoadArgs *pArgs, UErrorCode *errorCode){
                     ucnv_loadSharedData("jisx-208", &stackPieces, &stackArgs, errorCode);
             }
             /* End Google-specific change. */
-            /* END android-changed */
-
             if(jpCharsetMasks[version]&CSM(JISX212)) {
                 myConverterData->myConverterArray[JISX212] =
                     ucnv_loadSharedData("jisx-212", &stackPieces, &stackArgs, errorCode);
@@ -778,7 +776,7 @@ getKey_2022(char c,int32_t* key,int32_t* offset){
 
     while (hi != low)  /*binary search*/{
 
-        register int32_t mid = (hi+low) >> 1; /*Finds median*/
+        int32_t mid = (hi+low) >> 1; /*Finds median*/
 
         if (mid == oldmid)
             break;
